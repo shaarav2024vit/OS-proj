@@ -1,0 +1,36 @@
+[package]
+name = "strata"
+version = "0.1.0"
+edition = "2021"
+authors = ["Shaarav S <24BYB0118>", "Kevin T John <24BYB0163>"]
+description = "A terminal-based file manager with integrated disk analytics, snapshots, and encryption"
+
+[dependencies]
+# TUI & Terminal Handling (Linux rice aesthetic)
+ratatui = { version = "0.29", default-features = false, features = ["crossterm"] }
+crossterm = { version = "0.28", features = ["event-stream"] }
+
+# Concurrency & Filesystem Traversal
+walkdir = "2.5"
+crossbeam-channel = "0.5"
+
+# Cryptography & Security
+aes-gcm = "0.10"
+argon2 = "0.5"
+rand = "0.8"
+zeroize = { version = "1.8", features = ["derive"] }
+tar = "0.4"
+
+# Serialization & Persistence
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Fuzzy Matching & Navigation
+fuzzy-matcher = "0.3"
+
+# Utilities
+chrono = { version = "0.4", features = ["serde"] }
+anyhow = "1.0"
+directories = "5.0"
+unicode-width = "0.2"
+libc = "0.2"
