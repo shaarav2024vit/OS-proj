@@ -107,16 +107,25 @@ fn render_file_preview(
                 ),
             ]));
             lines.push(Line::from(""));
-            lines.push(Line::from(Span::styled(" [Binary or Non-UTF8 Content] ", Style::default().fg(theme.yellow))));
+            lines.push(Line::from(Span::styled(
+                " [Binary or Non-UTF8 Content] ",
+                Style::default().fg(theme.yellow),
+            )));
             if let Ok(meta) = path.metadata() {
                 lines.push(Line::from(vec![
                     Span::styled(" Size: ", Style::default().fg(theme.subtext)),
-                    Span::styled(format_bytes(meta.len()), Style::default().fg(theme.sapphire)),
+                    Span::styled(
+                        format_bytes(meta.len()),
+                        Style::default().fg(theme.sapphire),
+                    ),
                 ]));
             }
         }
     } else {
-        lines.push(Line::from(Span::styled(" Unable to read file ", Style::default().fg(theme.red))));
+        lines.push(Line::from(Span::styled(
+            " Unable to read file ",
+            Style::default().fg(theme.red),
+        )));
     }
 
     f.render_widget(Paragraph::new(lines), area);
@@ -137,18 +146,34 @@ fn render_directory_preview(
 
     lines.push(Line::from(vec![
         Span::styled("󰉋 ", Style::default().fg(theme.blue)),
-        Span::styled(&dir_node.name, Style::default().fg(theme.blue).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            &dir_node.name,
+            Style::default().fg(theme.blue).add_modifier(Modifier::BOLD),
+        ),
     ]));
     lines.push(Line::from(vec![
         Span::styled(" Total Size:   ", Style::default().fg(theme.subtext)),
-        Span::styled(format_bytes(dir_node.disk_size), Style::default().fg(theme.mauve).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            format_bytes(dir_node.disk_size),
+            Style::default()
+                .fg(theme.mauve)
+                .add_modifier(Modifier::BOLD),
+        ),
     ]));
     lines.push(Line::from(vec![
         Span::styled(" Total Items:  ", Style::default().fg(theme.subtext)),
-        Span::styled(format!("{}", dir_node.item_count), Style::default().fg(theme.teal)),
+        Span::styled(
+            format!("{}", dir_node.item_count),
+            Style::default().fg(theme.teal),
+        ),
     ]));
     lines.push(Line::from(""));
-    lines.push(Line::from(Span::styled(" Largest Contents: ", Style::default().fg(theme.mauve).add_modifier(Modifier::BOLD))));
+    lines.push(Line::from(Span::styled(
+        " Largest Contents: ",
+        Style::default()
+            .fg(theme.mauve)
+            .add_modifier(Modifier::BOLD),
+    )));
 
     let sorted = tree.sorted_children(dir_id, crate::model::SortOrder::SizeDesc);
     let max_display = area.height.saturating_sub(6) as usize;
@@ -157,9 +182,18 @@ fn render_directory_preview(
         if let Some(child) = tree.get_node(child_id) {
             let icon = get_file_icon(&child.path, child.is_dir(), child.is_encrypted);
             lines.push(Line::from(vec![
-                Span::styled(format!("  {} ", icon.glyph), Style::default().fg(icon.color)),
-                Span::styled(format!("{:<20} ", truncate(&child.name, 18)), Style::default().fg(theme.text)),
-                Span::styled(format_bytes(child.disk_size), Style::default().fg(theme.size_color(child.disk_size))),
+                Span::styled(
+                    format!("  {} ", icon.glyph),
+                    Style::default().fg(icon.color),
+                ),
+                Span::styled(
+                    format!("{:<20} ", truncate(&child.name, 18)),
+                    Style::default().fg(theme.text),
+                ),
+                Span::styled(
+                    format_bytes(child.disk_size),
+                    Style::default().fg(theme.size_color(child.disk_size)),
+                ),
             ]));
         }
     }
@@ -167,24 +201,32 @@ fn render_directory_preview(
     f.render_widget(Paragraph::new(lines), area);
 }
 
-fn render_encrypted_preview(
-    f: &mut Frame,
-    area: Rect,
-    name: &str,
-    _path: &Path,
-    theme: &Theme,
-) {
+fn render_encrypted_preview(f: &mut Frame, area: Rect, name: &str, _path: &Path, theme: &Theme) {
     let lines = vec![
         Line::from(vec![
             Span::styled("󰌆 ", Style::default().fg(theme.peach)),
-            Span::styled(name, Style::default().fg(theme.peach).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                name,
+                Style::default()
+                    .fg(theme.peach)
+                    .add_modifier(Modifier::BOLD),
+            ),
         ]),
         Line::from(""),
-        Line::from(Span::styled(" 󰒃 Authenticated Strata Vault ", Style::default().bg(theme.peach).fg(theme.bg_crust).add_modifier(Modifier::BOLD))),
+        Line::from(Span::styled(
+            " 󰒃 Authenticated Strata Vault ",
+            Style::default()
+                .bg(theme.peach)
+                .fg(theme.bg_crust)
+                .add_modifier(Modifier::BOLD),
+        )),
         Line::from(""),
         Line::from(vec![
             Span::styled(" Algorithm:    ", Style::default().fg(theme.subtext)),
-            Span::styled("AES-256-GCM (NIST SP 800-38D)", Style::default().fg(theme.teal)),
+            Span::styled(
+                "AES-256-GCM (NIST SP 800-38D)",
+                Style::default().fg(theme.teal),
+            ),
         ]),
         Line::from(vec![
             Span::styled(" Key Deriv:    ", Style::default().fg(theme.subtext)),
@@ -192,14 +234,23 @@ fn render_encrypted_preview(
         ]),
         Line::from(vec![
             Span::styled(" Nonce & Salt: ", Style::default().fg(theme.subtext)),
-            Span::styled("Cryptographically Random (28B)", Style::default().fg(theme.teal)),
+            Span::styled(
+                "Cryptographically Random (28B)",
+                Style::default().fg(theme.teal),
+            ),
         ]),
         Line::from(vec![
             Span::styled(" Integrity:    ", Style::default().fg(theme.subtext)),
-            Span::styled("Poly1305 AEAD Tag (Tamper-Proof)", Style::default().fg(theme.green)),
+            Span::styled(
+                "Poly1305 AEAD Tag (Tamper-Proof)",
+                Style::default().fg(theme.green),
+            ),
         ]),
         Line::from(""),
-        Line::from(Span::styled(" Press [u] to unlock & decrypt this item ", Style::default().fg(theme.yellow))),
+        Line::from(Span::styled(
+            " Press [u] to unlock & decrypt this item ",
+            Style::default().fg(theme.yellow),
+        )),
     ];
 
     f.render_widget(Paragraph::new(lines), area);

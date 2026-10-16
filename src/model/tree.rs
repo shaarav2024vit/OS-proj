@@ -1,6 +1,6 @@
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use serde::{Deserialize, Serialize};
 
 use super::node::{FileNode, NodeId, NodeType};
 
@@ -111,7 +111,7 @@ impl DirectoryTree {
             .collect();
 
         // Sort descending by depth so children are processed before parents
-        depths.sort_unstable_by(|a, b| b.0.cmp(&a.0));
+        depths.sort_unstable_by_key(|d| std::cmp::Reverse(d.0));
 
         // Reset directory aggregates
         for node in &mut self.nodes {
@@ -122,15 +122,15 @@ impl DirectoryTree {
         }
 
         for (_, id) in depths {
-            let (is_dir, disk_size, parent_id) = {
+            let (disk_size, parent_id) = {
                 let n = &self.nodes[id];
-                (n.is_dir(), n.disk_size, n.parent)
+                (n.disk_size, n.parent)
             };
 
             if let Some(pid) = parent_id {
                 let parent = &mut self.nodes[pid];
                 parent.disk_size += disk_size;
-                parent.item_count += if is_dir { 1 } else { 1 };
+                parent.item_count += 1;
             }
         }
     }

@@ -1,12 +1,13 @@
 use ratatui::layout::{Constraint, Rect};
 use ratatui::style::{Color, Modifier, Style};
-use ratatui::widgets::{Block, Borders, Cell, Row, Table};
+use ratatui::widgets::{Block, Borders, Cell, Row, Table, TableState};
 use ratatui::Frame;
 
 use crate::model::{DirectoryTree, NodeId, SortOrder};
 use crate::ui::icons::get_file_icon;
 use crate::ui::theme::Theme;
 
+#[allow(clippy::too_many_arguments)]
 pub fn render_file_table(
     f: &mut Frame,
     area: Rect,
@@ -17,6 +18,7 @@ pub fn render_file_table(
     sort_order: SortOrder,
     filter_query: &str,
     theme: &Theme,
+    table_state: &mut TableState,
 ) {
     let current_dir = tree.get_node(current_dir_id);
     let total_dir_size = current_dir.map(|d| d.disk_size).unwrap_or(1).max(1);
@@ -43,75 +45,88 @@ pub fn render_file_table(
         .title(title)
         .title_style(theme.title_style());
 
-    let header_cells = ["", " Name", "Usage Bar", "%", "Disk Size", "Items", "Modified"]
-        .iter()
-        .map(|&h| {
-            Cell::from(h).style(
-                Style::default()
-                    .fg(theme.mauve)
-                    .add_modifier(Modifier::BOLD),
-            )
-        });
+    let header_cells = [
+        "",
+        " Name",
+        "Usage Bar",
+        "%",
+        "Disk Size",
+        "Items",
+        "Modified",
+    ]
+    .iter()
+    .map(|&h| {
+        Cell::from(h).style(
+            Style::default()
+                .fg(theme.mauve)
+                .add_modifier(Modifier::BOLD),
+        )
+    });
     let header = Row::new(header_cells)
         .style(Style::default().bg(theme.bg_mantle))
         .height(1)
         .bottom_margin(1);
 
-    let rows = sorted_children.iter().enumerate().map(|(idx, &child_id)| {
-        let node = match tree.get_node(child_id) {
-            Some(n) => n,
-            None => return Row::new(vec![Cell::from("")]),
-        };
+    let rows: Vec<Row> = sorted_children
+        .iter()
+        .enumerate()
+        .map(|(idx, &child_id)| {
+            let node = match tree.get_node(child_id) {
+                Some(n) => n,
+                None => return Row::new(vec![Cell::from("")]),
+            };
 
-        let is_selected = idx == selected_index;
-        let prefix = if is_selected { " ❯ " } else { "   " };
+            let is_selected = idx == selected_index;
+            let prefix = if is_selected { " ❯ " } else { "   " };
 
-        let file_icon = get_file_icon(&node.path, node.is_dir(), node.is_encrypted);
+            let file_icon = get_file_icon(&node.path, node.is_dir(), node.is_encrypted);
 
-        let name_style = if node.is_encrypted {
-            theme.encrypted_style()
-        } else if node.is_dir() {
-            theme.directory_style()
-        } else {
-            theme.file_style()
-        };
+            let name_style = if node.is_encrypted {
+                theme.encrypted_style()
+            } else if node.is_dir() {
+                theme.directory_style()
+            } else {
+                theme.file_style()
+            };
 
-        let icon_span = file_icon.glyph;
-        let display_name = format!("{}{}{}", prefix, icon_span, node.name);
+            let icon_span = file_icon.glyph;
+            let display_name = format!("{}{}{}", prefix, icon_span, node.name);
 
-        // Usage bar calculation relative to current directory total
-        let ratio = (node.disk_size as f64) / (total_dir_size as f64);
-        let bar_width = 14;
-        let (bar_str, bar_style) = theme.format_usage_bar(ratio, bar_width);
+            // Usage bar calculation relative to current directory total
+            let ratio = (node.disk_size as f64) / (total_dir_size as f64);
+            let bar_width = 14;
+            let (bar_str, bar_style) = theme.format_usage_bar(ratio, bar_width);
 
-        let pct_str = format!("{:>5.1}%", ratio * 100.0);
-        let size_str = format_bytes(node.disk_size);
-        let size_style = Style::default().fg(theme.size_color(node.disk_size));
+            let pct_str = format!("{:>5.1}%", ratio * 100.0);
+            let size_str = format_bytes(node.disk_size);
+            let size_style = Style::default().fg(theme.size_color(node.disk_size));
 
-        let items_str = if node.is_dir() {
-            format!("{}", node.item_count)
-        } else {
-            "-".to_string()
-        };
+            let items_str = if node.is_dir() {
+                format!("{}", node.item_count)
+            } else {
+                "-".to_string()
+            };
 
-        let mod_str = format_timestamp(node.modified);
+            let mod_str = format_timestamp(node.modified);
 
-        let row_cells = vec![
-            Cell::from(""),
-            Cell::from(display_name).style(name_style),
-            Cell::from(bar_str).style(bar_style),
-            Cell::from(pct_str).style(Style::default().fg(theme.subtext)),
-            Cell::from(size_str).style(size_style),
-            Cell::from(items_str).style(Style::default().fg(theme.subtext)),
-            Cell::from(mod_str).style(Style::default().fg(theme.dim_style().fg.unwrap_or(Color::DarkGray))),
-        ];
+            let row_cells = vec![
+                Cell::from(""),
+                Cell::from(display_name).style(name_style),
+                Cell::from(bar_str).style(bar_style),
+                Cell::from(pct_str).style(Style::default().fg(theme.subtext)),
+                Cell::from(size_str).style(size_style),
+                Cell::from(items_str).style(Style::default().fg(theme.subtext)),
+                Cell::from(mod_str)
+                    .style(Style::default().fg(theme.dim_style().fg.unwrap_or(Color::DarkGray))),
+            ];
 
-        let mut row = Row::new(row_cells).height(1);
-        if is_selected {
-            row = row.style(theme.selected_row_style());
-        }
-        row
-    });
+            let mut row = Row::new(row_cells).height(1);
+            if is_selected {
+                row = row.style(theme.selected_row_style());
+            }
+            row
+        })
+        .collect();
 
     let widths = [
         Constraint::Length(1),
@@ -126,9 +141,16 @@ pub fn render_file_table(
     let table = Table::new(rows, widths)
         .header(header)
         .block(block)
-        .column_spacing(1);
+        .column_spacing(1)
+        .row_highlight_style(Style::default()); // We handle highlight manually per-row
 
-    f.render_widget(table, area);
+    if !sorted_children.is_empty() {
+        table_state.select(Some(selected_index));
+    } else {
+        table_state.select(None);
+    }
+
+    f.render_stateful_widget(table, area, table_state);
 }
 
 fn format_bytes(bytes: u64) -> String {

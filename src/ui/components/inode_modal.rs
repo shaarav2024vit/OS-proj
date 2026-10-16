@@ -11,12 +11,7 @@ use ratatui::Frame;
 use super::jump_modal::centered_rect;
 use crate::ui::theme::Theme;
 
-pub fn render_inode_modal(
-    f: &mut Frame,
-    area: Rect,
-    target_path: &Path,
-    theme: &Theme,
-) {
+pub fn render_inode_modal(f: &mut Frame, area: Rect, target_path: &Path, theme: &Theme) {
     let popup_area = centered_rect(65, 60, area);
     f.render_widget(Clear, popup_area);
 
@@ -66,46 +61,72 @@ pub fn render_inode_modal(
 
     let is_dir = metadata.is_dir();
     let is_symlink = metadata.file_type().is_symlink();
-    let kind_str = if is_dir { "Directory" } else if is_symlink { "Symbolic Link" } else { "Regular File" };
+    let kind_str = if is_dir {
+        "Directory"
+    } else if is_symlink {
+        "Symbolic Link"
+    } else {
+        "Regular File"
+    };
 
     let mut lines = Vec::new();
 
     // Section 1: File Identity
     lines.push(Line::from(vec![
         Span::styled("Target Path:     ", Style::default().fg(theme.subtext)),
-        Span::styled(target_path.display().to_string(), Style::default().fg(theme.text).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            target_path.display().to_string(),
+            Style::default().fg(theme.text).add_modifier(Modifier::BOLD),
+        ),
     ]));
     lines.push(Line::from(vec![
         Span::styled("Node Type:       ", Style::default().fg(theme.subtext)),
-        Span::styled(kind_str, Style::default().fg(theme.blue).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            kind_str,
+            Style::default().fg(theme.blue).add_modifier(Modifier::BOLD),
+        ),
     ]));
     lines.push(Line::from(""));
 
     // Section 2: Inode & POSIX Properties
     lines.push(Line::from(vec![
         Span::styled("Inode Number:    ", Style::default().fg(theme.mauve)),
-        Span::styled(format!("{:<15}", ino), Style::default().fg(theme.text).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            format!("{:<15}", ino),
+            Style::default().fg(theme.text).add_modifier(Modifier::BOLD),
+        ),
         Span::styled("Device ID:      ", Style::default().fg(theme.mauve)),
         Span::styled(format!("{}", dev), Style::default().fg(theme.text)),
     ]));
 
     lines.push(Line::from(vec![
         Span::styled("POSIX Perms:     ", Style::default().fg(theme.teal)),
-        Span::styled(format!("{} (octal: {})  ", permissions_sym, permissions_oct), Style::default().fg(theme.green).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            format!("{} (octal: {})  ", permissions_sym, permissions_oct),
+            Style::default()
+                .fg(theme.green)
+                .add_modifier(Modifier::BOLD),
+        ),
         Span::styled("Hard Links:     ", Style::default().fg(theme.teal)),
         Span::styled(format!("{}", nlink), Style::default().fg(theme.text)),
     ]));
 
     lines.push(Line::from(vec![
         Span::styled("Owner / Group:   ", Style::default().fg(theme.subtext)),
-        Span::styled(format!("UID {} : GID {}", uid, gid), Style::default().fg(theme.text)),
+        Span::styled(
+            format!("UID {} : GID {}", uid, gid),
+            Style::default().fg(theme.text),
+        ),
     ]));
     lines.push(Line::from(""));
 
     // Section 3: Disk Space & Block Allocation
     lines.push(Line::from(vec![
         Span::styled("Logical Size:    ", Style::default().fg(theme.sapphire)),
-        Span::styled(format!("{} ({} bytes)", format_bytes(logical_bytes), logical_bytes), Style::default().fg(theme.text)),
+        Span::styled(
+            format!("{} ({} bytes)", format_bytes(logical_bytes), logical_bytes),
+            Style::default().fg(theme.text),
+        ),
     ]));
 
     let eff_str = if physical_bytes > 0 {
@@ -117,12 +138,25 @@ pub fn render_inode_modal(
 
     lines.push(Line::from(vec![
         Span::styled("Disk Allocated:  ", Style::default().fg(theme.sapphire)),
-        Span::styled(format!("{} ({} 512-byte blocks){}", format_bytes(physical_bytes), blocks, eff_str), Style::default().fg(theme.peach).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            format!(
+                "{} ({} 512-byte blocks){}",
+                format_bytes(physical_bytes),
+                blocks,
+                eff_str
+            ),
+            Style::default()
+                .fg(theme.peach)
+                .add_modifier(Modifier::BOLD),
+        ),
     ]));
 
     lines.push(Line::from(vec![
         Span::styled("I/O Block Size:  ", Style::default().fg(theme.subtext)),
-        Span::styled(format!("{} bytes (optimum filesystem cluster)", blksize), Style::default().fg(theme.text)),
+        Span::styled(
+            format!("{} bytes (optimum filesystem cluster)", blksize),
+            Style::default().fg(theme.text),
+        ),
     ]));
     lines.push(Line::from(""));
 
@@ -144,7 +178,12 @@ pub fn render_inode_modal(
 
     // Footer
     let footer = Line::from(vec![
-        Span::styled(" [Esc/i/q] ", Style::default().fg(theme.mauve).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            " [Esc/i/q] ",
+            Style::default()
+                .fg(theme.mauve)
+                .add_modifier(Modifier::BOLD),
+        ),
         Span::styled("Close Inode Inspector", Style::default().fg(theme.subtext)),
     ]);
     f.render_widget(Paragraph::new(footer), inner[1]);
@@ -152,7 +191,13 @@ pub fn render_inode_modal(
 
 fn format_permissions(mode: u32) -> String {
     let mut s = String::with_capacity(10);
-    s.push(if (mode & 0o170000) == 0o040000 { 'd' } else if (mode & 0o170000) == 0o120000 { 'l' } else { '-' });
+    s.push(if (mode & 0o170000) == 0o040000 {
+        'd'
+    } else if (mode & 0o170000) == 0o120000 {
+        'l'
+    } else {
+        '-'
+    });
     s.push(if (mode & 0o400) != 0 { 'r' } else { '-' });
     s.push(if (mode & 0o200) != 0 { 'w' } else { '-' });
     s.push(if (mode & 0o100) != 0 { 'x' } else { '-' });

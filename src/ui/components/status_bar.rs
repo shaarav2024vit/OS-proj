@@ -22,6 +22,7 @@ pub enum AppMode {
 
 const SPINNER_FRAMES: &[&str] = &["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 
+#[allow(clippy::too_many_arguments)]
 pub fn render_status_bar(
     f: &mut Frame,
     area: Rect,
@@ -72,12 +73,25 @@ pub fn render_status_bar(
     );
 
     let gauge_span = Span::styled(
-        format!(" 󰋊 {} ({} items) ", format_bytes_short(total_size), item_count),
-        Style::default().bg(theme.surface1).fg(theme.mauve).add_modifier(Modifier::BOLD),
+        format!(
+            " 󰋊 {} ({} items) ",
+            format_bytes_short(total_size),
+            item_count
+        ),
+        Style::default()
+            .bg(theme.surface1)
+            .fg(theme.mauve)
+            .add_modifier(Modifier::BOLD),
     );
 
     let preview_tag = if preview_active {
-        Span::styled(" [PREVIEW] ", Style::default().bg(theme.teal).fg(theme.bg_crust).add_modifier(Modifier::BOLD))
+        Span::styled(
+            " [PREVIEW] ",
+            Style::default()
+                .bg(theme.teal)
+                .fg(theme.bg_crust)
+                .add_modifier(Modifier::BOLD),
+        )
     } else {
         Span::raw("")
     };
@@ -91,43 +105,119 @@ pub fn render_status_bar(
         Span::raw("")
     };
 
-    let line1 = Line::from(vec![mode_pill, path_span, gauge_span, preview_tag, msg_span]);
-    f.render_widget(Paragraph::new(line1).block(Block::default().style(Style::default().bg(theme.bg_mantle))), chunks[0]);
+    let line1 = Line::from(vec![
+        mode_pill,
+        path_span,
+        gauge_span,
+        preview_tag,
+        msg_span,
+    ]);
+    f.render_widget(
+        Paragraph::new(line1).block(Block::default().style(Style::default().bg(theme.bg_mantle))),
+        chunks[0],
+    );
 
     // Line 2: Linux-rice clean keybindings bar
     let keys = vec![
-        Span::styled(" [j/k] ", Style::default().fg(theme.mauve).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            " [j/k] ",
+            Style::default()
+                .fg(theme.mauve)
+                .add_modifier(Modifier::BOLD),
+        ),
         Span::styled("Nav ", Style::default().fg(theme.subtext)),
-        Span::styled(" [Enter/h] ", Style::default().fg(theme.mauve).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            " [Enter/h] ",
+            Style::default()
+                .fg(theme.mauve)
+                .add_modifier(Modifier::BOLD),
+        ),
         Span::styled("In/Out ", Style::default().fg(theme.subtext)),
-        Span::styled(" [Tab] ", Style::default().fg(theme.teal).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            " [Tab] ",
+            Style::default().fg(theme.teal).add_modifier(Modifier::BOLD),
+        ),
         Span::styled("Preview ", Style::default().fg(theme.subtext)),
-        Span::styled(" [b] ", Style::default().fg(theme.peach).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            " [b] ",
+            Style::default()
+                .fg(theme.peach)
+                .add_modifier(Modifier::BOLD),
+        ),
         Span::styled("Breakdown ", Style::default().fg(theme.subtext)),
-        Span::styled(" [i] ", Style::default().fg(theme.green).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            " [i] ",
+            Style::default()
+                .fg(theme.green)
+                .add_modifier(Modifier::BOLD),
+        ),
         Span::styled("Inode ", Style::default().fg(theme.subtext)),
-        Span::styled(" [t] ", Style::default().fg(theme.peach).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            " [t] ",
+            Style::default()
+                .fg(theme.peach)
+                .add_modifier(Modifier::BOLD),
+        ),
         Span::styled("Hogs ", Style::default().fg(theme.subtext)),
-        Span::styled(" [/] ", Style::default().fg(theme.yellow).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            " [/] ",
+            Style::default()
+                .fg(theme.yellow)
+                .add_modifier(Modifier::BOLD),
+        ),
         Span::styled("Filter ", Style::default().fg(theme.subtext)),
-        Span::styled(" [s] ", Style::default().fg(theme.mauve).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            " [s] ",
+            Style::default()
+                .fg(theme.mauve)
+                .add_modifier(Modifier::BOLD),
+        ),
         Span::styled("Sort ", Style::default().fg(theme.subtext)),
-        Span::styled(" [f] ", Style::default().fg(theme.teal).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            " [f] ",
+            Style::default().fg(theme.teal).add_modifier(Modifier::BOLD),
+        ),
         Span::styled("Jump ", Style::default().fg(theme.subtext)),
-        Span::styled(" [p/d] ", Style::default().fg(theme.sapphire).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            " [p/d] ",
+            Style::default()
+                .fg(theme.sapphire)
+                .add_modifier(Modifier::BOLD),
+        ),
         Span::styled("Snap/Diff ", Style::default().fg(theme.subtext)),
-        Span::styled(" [e/u] ", Style::default().fg(theme.peach).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            " [e/u] ",
+            Style::default()
+                .fg(theme.peach)
+                .add_modifier(Modifier::BOLD),
+        ),
         Span::styled("Crypt ", Style::default().fg(theme.subtext)),
-        Span::styled(" [T] ", Style::default().fg(theme.sapphire).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            " [T] ",
+            Style::default()
+                .fg(theme.sapphire)
+                .add_modifier(Modifier::BOLD),
+        ),
         Span::styled("Theme ", Style::default().fg(theme.subtext)),
-        Span::styled(" [x] ", Style::default().fg(theme.red).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            " [x] ",
+            Style::default().fg(theme.red).add_modifier(Modifier::BOLD),
+        ),
         Span::styled("Del ", Style::default().fg(theme.subtext)),
-        Span::styled(" [q] ", Style::default().fg(theme.red).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            " [q] ",
+            Style::default().fg(theme.red).add_modifier(Modifier::BOLD),
+        ),
         Span::styled("Quit", Style::default().fg(theme.subtext)),
     ];
 
     let line2 = Line::from(keys);
-    f.render_widget(Paragraph::new(line2).alignment(Alignment::Left).style(Style::default().bg(theme.bg_crust)), chunks[1]);
+    f.render_widget(
+        Paragraph::new(line2)
+            .alignment(Alignment::Left)
+            .style(Style::default().bg(theme.bg_crust)),
+        chunks[1],
+    );
 }
 
 fn truncate_path(path: &str, max_len: usize) -> String {

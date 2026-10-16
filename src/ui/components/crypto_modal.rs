@@ -15,6 +15,7 @@ pub enum CryptoAction {
     Decrypt,
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn render_crypto_modal(
     f: &mut Frame,
     area: Rect,
@@ -30,7 +31,10 @@ pub fn render_crypto_modal(
     f.render_widget(Clear, popup_area);
 
     let (title, border_color) = match action {
-        CryptoAction::Encrypt => (" 󰌆 Secure Vault: Encrypt (AES-256-GCM + Argon2id) ", theme.peach),
+        CryptoAction::Encrypt => (
+            " 󰌆 Secure Vault: Encrypt (AES-256-GCM + Argon2id) ",
+            theme.peach,
+        ),
         CryptoAction::Decrypt => (" 󰌆 Secure Vault: Decrypt (AES-256-GCM) ", theme.teal),
     };
 
@@ -39,7 +43,11 @@ pub fn render_crypto_modal(
         .border_type(Theme::BORDER_TYPE)
         .border_style(Style::default().fg(border_color))
         .title(title)
-        .title_style(Style::default().fg(border_color).add_modifier(Modifier::BOLD))
+        .title_style(
+            Style::default()
+                .fg(border_color)
+                .add_modifier(Modifier::BOLD),
+        )
         .style(Style::default().bg(theme.bg_base));
 
     f.render_widget(block, popup_area);
@@ -61,7 +69,9 @@ pub fn render_crypto_modal(
         .unwrap_or("selected item");
 
     let action_desc = match action {
-        CryptoAction::Encrypt => format!("Encrypting '{}' with Argon2id key derivation", target_name),
+        CryptoAction::Encrypt => {
+            format!("Encrypting '{}' with Argon2id key derivation", target_name)
+        }
         CryptoAction::Decrypt => format!("Decrypting '{}' using master passphrase", target_name),
     };
 
@@ -70,7 +80,11 @@ pub fn render_crypto_modal(
 
     // Password input box
     let masked_pw = "•".repeat(password_len);
-    let pw_border_color = if !is_confirm_field { theme.mauve } else { theme.surface1 };
+    let pw_border_color = if !is_confirm_field {
+        theme.mauve
+    } else {
+        theme.surface1
+    };
     let pw_block = Block::default()
         .borders(Borders::ALL)
         .border_type(Theme::BORDER_TYPE)
@@ -80,14 +94,22 @@ pub fn render_crypto_modal(
     let cursor1 = if !is_confirm_field { "█" } else { "" };
     let pw_text = format!(" ❯ {}{}", masked_pw, cursor1);
     let pw_p = Paragraph::new(pw_text)
-        .style(Style::default().fg(theme.mauve).add_modifier(Modifier::BOLD))
+        .style(
+            Style::default()
+                .fg(theme.mauve)
+                .add_modifier(Modifier::BOLD),
+        )
         .block(pw_block);
     f.render_widget(pw_p, inner[1]);
 
     // Confirmation input box or Strength indicator
     if let Some(c_len) = confirm_len {
         let masked_confirm = "•".repeat(c_len);
-        let confirm_border_color = if is_confirm_field { theme.mauve } else { theme.surface1 };
+        let confirm_border_color = if is_confirm_field {
+            theme.mauve
+        } else {
+            theme.surface1
+        };
         let confirm_block = Block::default()
             .borders(Borders::ALL)
             .border_type(Theme::BORDER_TYPE)
@@ -97,7 +119,11 @@ pub fn render_crypto_modal(
         let cursor2 = if is_confirm_field { "█" } else { "" };
         let confirm_text = format!(" ❯ {}{}", masked_confirm, cursor2);
         let confirm_p = Paragraph::new(confirm_text)
-            .style(Style::default().fg(theme.mauve).add_modifier(Modifier::BOLD))
+            .style(
+                Style::default()
+                    .fg(theme.mauve)
+                    .add_modifier(Modifier::BOLD),
+            )
             .block(confirm_block);
         f.render_widget(confirm_p, inner[2]);
     } else {
@@ -123,11 +149,22 @@ pub fn render_crypto_modal(
         )])
     } else {
         Line::from(vec![
-            Span::styled(" [Enter] ", Style::default().fg(theme.green).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                " [Enter] ",
+                Style::default()
+                    .fg(theme.green)
+                    .add_modifier(Modifier::BOLD),
+            ),
             Span::styled("Execute  ", Style::default().fg(theme.subtext)),
-            Span::styled(" [Tab] ", Style::default().fg(theme.teal).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                " [Tab] ",
+                Style::default().fg(theme.teal).add_modifier(Modifier::BOLD),
+            ),
             Span::styled("Next field  ", Style::default().fg(theme.subtext)),
-            Span::styled(" [Esc] ", Style::default().fg(theme.red).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                " [Esc] ",
+                Style::default().fg(theme.red).add_modifier(Modifier::BOLD),
+            ),
             Span::styled("Cancel", Style::default().fg(theme.subtext)),
         ])
     };

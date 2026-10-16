@@ -1,5 +1,5 @@
-use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
 
 pub type NodeId = usize;
 
@@ -17,16 +17,22 @@ pub struct FileNode {
     pub path: PathBuf,
     pub node_type: NodeType,
     pub apparent_size: u64,
-    pub disk_size: u64,         // Aggregated for directories
-    pub item_count: usize,      // Number of files/dirs inside
-    pub modified: u64,          // Unix timestamp
+    pub disk_size: u64,    // Aggregated for directories
+    pub item_count: usize, // Number of files/dirs inside
+    pub modified: u64,     // Unix timestamp
     pub parent: Option<NodeId>,
     pub children: Vec<NodeId>,
-    pub is_encrypted: bool,     // Ends with .strata
+    pub is_encrypted: bool, // Ends with .strata
 }
 
 impl FileNode {
-    pub fn new(id: NodeId, name: String, path: PathBuf, node_type: NodeType, parent: Option<NodeId>) -> Self {
+    pub fn new(
+        id: NodeId,
+        name: String,
+        path: PathBuf,
+        node_type: NodeType,
+        parent: Option<NodeId>,
+    ) -> Self {
         let is_encrypted = name.ends_with(".strata");
         Self {
             id,

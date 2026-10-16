@@ -41,7 +41,11 @@ pub fn render_breakdown_modal(
     let inner = Layout::default()
         .direction(Direction::Vertical)
         .margin(1)
-        .constraints([Constraint::Length(2), Constraint::Min(8), Constraint::Length(1)])
+        .constraints([
+            Constraint::Length(2),
+            Constraint::Min(8),
+            Constraint::Length(1),
+        ])
         .split(popup_area);
 
     let header_text = format!(
@@ -49,7 +53,11 @@ pub fn render_breakdown_modal(
         format_bytes(total_scanned_bytes),
         categories.len()
     );
-    let header_p = Paragraph::new(header_text).style(Style::default().fg(theme.mauve).add_modifier(Modifier::BOLD));
+    let header_p = Paragraph::new(header_text).style(
+        Style::default()
+            .fg(theme.mauve)
+            .add_modifier(Modifier::BOLD),
+    );
     f.render_widget(header_p, inner[0]);
 
     let max_cat_size = categories.first().map(|c| c.total_size).unwrap_or(1).max(1);
@@ -73,17 +81,35 @@ pub fn render_breakdown_modal(
             let pct_str = format!("{:>5.1}%", ratio_overall * 100.0);
 
             let spans = vec![
-                Span::styled(prefix, if is_sel { Style::default().fg(theme.mauve) } else { theme.dim_style() }),
+                Span::styled(
+                    prefix,
+                    if is_sel {
+                        Style::default().fg(theme.mauve)
+                    } else {
+                        theme.dim_style()
+                    },
+                ),
                 Span::styled(format!("{} ", cat.icon), Style::default().fg(cat.color)),
                 Span::styled(
                     format!("{:<22} ", cat.name),
-                    if is_sel { Style::default().fg(theme.text).add_modifier(Modifier::BOLD) } else { Style::default().fg(theme.subtext) },
+                    if is_sel {
+                        Style::default().fg(theme.text).add_modifier(Modifier::BOLD)
+                    } else {
+                        Style::default().fg(theme.subtext)
+                    },
                 ),
                 Span::styled(bar_str, Style::default().fg(cat.color)),
-                Span::styled(format!(" {} ", pct_str), Style::default().fg(theme.mauve).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    format!(" {} ", pct_str),
+                    Style::default()
+                        .fg(theme.mauve)
+                        .add_modifier(Modifier::BOLD),
+                ),
                 Span::styled(
                     format!(" {:>10}", format_bytes(cat.total_size)),
-                    Style::default().fg(theme.size_color(cat.total_size)).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(theme.size_color(cat.total_size))
+                        .add_modifier(Modifier::BOLD),
                 ),
                 Span::styled(
                     format!("  ({} files)", cat.file_count),
@@ -108,9 +134,17 @@ pub fn render_breakdown_modal(
     f.render_widget(list, inner[1]);
 
     let footer = Line::from(vec![
-        Span::styled(" [j/k] ", Style::default().fg(theme.mauve).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            " [j/k] ",
+            Style::default()
+                .fg(theme.mauve)
+                .add_modifier(Modifier::BOLD),
+        ),
         Span::styled("Select Category   ", Style::default().fg(theme.subtext)),
-        Span::styled(" [Esc/b/q] ", Style::default().fg(theme.red).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            " [Esc/b/q] ",
+            Style::default().fg(theme.red).add_modifier(Modifier::BOLD),
+        ),
         Span::styled("Close Breakdown", Style::default().fg(theme.subtext)),
     ]);
     f.render_widget(Paragraph::new(footer), inner[2]);
@@ -154,24 +188,71 @@ pub fn calculate_category_stats(tree: &DirectoryTree) -> (Vec<CategoryStat>, u64
             .unwrap_or("")
             .to_lowercase();
 
-        let is_build_path = node
-            .path
-            .components()
-            .any(|c| c.as_os_str() == "target" || c.as_os_str() == "build" || c.as_os_str() == "dist" || c.as_os_str() == "node_modules");
+        let is_build_path = node.path.components().any(|c| {
+            c.as_os_str() == "target"
+                || c.as_os_str() == "build"
+                || c.as_os_str() == "dist"
+                || c.as_os_str() == "node_modules"
+        });
 
-        if is_build_path || matches!(ext.as_str(), "o" | "so" | "a" | "dll" | "exe" | "bin" | "dylib" | "class") {
+        if is_build_path
+            || matches!(
+                ext.as_str(),
+                "o" | "so" | "a" | "dll" | "exe" | "bin" | "dylib" | "class"
+            )
+        {
             build_size += node.disk_size;
             build_count += 1;
-        } else if node.is_encrypted || matches!(ext.as_str(), "zip" | "tar" | "gz" | "bz2" | "xz" | "7z" | "zst") {
+        } else if node.is_encrypted
+            || matches!(
+                ext.as_str(),
+                "zip" | "tar" | "gz" | "bz2" | "xz" | "7z" | "zst"
+            )
+        {
             archive_size += node.disk_size;
             archive_count += 1;
-        } else if matches!(ext.as_str(), "rs" | "py" | "c" | "cpp" | "h" | "hpp" | "go" | "java" | "js" | "ts" | "jsx" | "tsx" | "sh" | "html" | "css" | "lua" | "sql") {
+        } else if matches!(
+            ext.as_str(),
+            "rs" | "py"
+                | "c"
+                | "cpp"
+                | "h"
+                | "hpp"
+                | "go"
+                | "java"
+                | "js"
+                | "ts"
+                | "jsx"
+                | "tsx"
+                | "sh"
+                | "html"
+                | "css"
+                | "lua"
+                | "sql"
+        ) {
             code_size += node.disk_size;
             code_count += 1;
-        } else if matches!(ext.as_str(), "png" | "jpg" | "jpeg" | "gif" | "webp" | "svg" | "mp4" | "mkv" | "avi" | "mp3" | "wav" | "flac") {
+        } else if matches!(
+            ext.as_str(),
+            "png"
+                | "jpg"
+                | "jpeg"
+                | "gif"
+                | "webp"
+                | "svg"
+                | "mp4"
+                | "mkv"
+                | "avi"
+                | "mp3"
+                | "wav"
+                | "flac"
+        ) {
             media_size += node.disk_size;
             media_count += 1;
-        } else if matches!(ext.as_str(), "json" | "yaml" | "yml" | "toml" | "xml" | "csv" | "ini" | "conf" | "db" | "sqlite") {
+        } else if matches!(
+            ext.as_str(),
+            "json" | "yaml" | "yml" | "toml" | "xml" | "csv" | "ini" | "conf" | "db" | "sqlite"
+        ) {
             data_size += node.disk_size;
             data_count += 1;
         } else if matches!(ext.as_str(), "md" | "txt" | "pdf" | "docx" | "odt") {
@@ -236,7 +317,7 @@ pub fn calculate_category_stats(tree: &DirectoryTree) -> (Vec<CategoryStat>, u64
     ];
 
     list.retain(|c| c.file_count > 0 || c.total_size > 0);
-    list.sort_by(|a, b| b.total_size.cmp(&a.total_size));
+    list.sort_by_key(|a| std::cmp::Reverse(a.total_size));
 
     (list, total_bytes)
 }

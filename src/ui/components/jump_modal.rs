@@ -62,7 +62,9 @@ pub fn render_jump_modal(
             spans.push(Span::styled(
                 prefix,
                 if is_sel {
-                    Style::default().fg(theme.mauve).add_modifier(Modifier::BOLD)
+                    Style::default()
+                        .fg(theme.mauve)
+                        .add_modifier(Modifier::BOLD)
                 } else {
                     theme.dim_style()
                 },

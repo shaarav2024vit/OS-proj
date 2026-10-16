@@ -1,11 +1,13 @@
+use std::cell::RefCell;
 use std::fs;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
-use crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseButton, MouseEvent, MouseEventKind};
 use crossbeam_channel::{unbounded, Receiver, Sender};
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseButton, MouseEvent, MouseEventKind};
 use ratatui::layout::{Constraint, Direction, Layout};
+use ratatui::widgets::TableState;
 use ratatui::Frame;
 
 use crate::crypto::CryptoEngine;
@@ -77,6 +79,7 @@ pub struct App {
     pub frame_tick: usize,
     pub volume_info: Option<VolumeInfo>,
     pub last_terminal_size: std::cell::Cell<(u16, u16)>,
+    pub table_state: RefCell<TableState>,
 
     pub modal: ModalState,
     pub should_quit: bool,
@@ -113,6 +116,7 @@ impl App {
             frame_tick: 0,
             volume_info,
             last_terminal_size: std::cell::Cell::new((0, 0)),
+            table_state: RefCell::new(TableState::default()),
 
             modal: ModalState::None,
             should_quit: false,
@@ -153,20 +157,24 @@ impl App {
                     }
                     self.tree.aggregate_sizes();
                 }
-                ScannerMessage::Progress { files, current_path, .. } => {
+                ScannerMessage::Progress {
+                    files,
+                    current_path,
+                    ..
+                } => {
                     self.status_message = format!(
                         "Scanning: {} items ({})",
                         files,
-                        current_path.file_name().and_then(|n| n.to_str()).unwrap_or("")
+                        current_path
+                            .file_name()
+                            .and_then(|n| n.to_str())
+                            .unwrap_or("")
                     );
                 }
                 ScannerMessage::Complete { total_files, .. } => {
                     self.tree.aggregate_sizes();
                     self.is_scanning = false;
-                    self.status_message = format!(
-                        "Scan complete: {} items indexed",
-                        total_files
-                    );
+                    self.status_message = format!("Scan complete: {} items indexed", total_files);
                 }
                 ScannerMessage::Error(_) => {}
             }
@@ -174,7 +182,9 @@ impl App {
     }
 
     pub fn current_children(&self) -> Vec<NodeId> {
-        let all_sorted = self.tree.sorted_children(self.current_dir_id, self.sort_order);
+        let all_sorted = self
+            .tree
+            .sorted_children(self.current_dir_id, self.sort_order);
         if self.filter_query.is_empty() {
             all_sorted
         } else {
@@ -193,28 +203,107 @@ impl App {
     }
 
     pub fn handle_mouse(&mut self, mouse: MouseEvent) {
+        let in_modal = !matches!(self.modal, ModalState::None | ModalState::Filter);
+
         match mouse.kind {
             MouseEventKind::ScrollDown => {
+                if in_modal {
+                    self.scroll_modal_down();
+                    return;
+                }
                 let children = self.current_children();
                 if !children.is_empty() {
-                    self.selected_index = (self.selected_index + 1) % children.len();
+                    self.selected_index = (self.selected_index + 1).min(children.len() - 1);
                 }
             }
             MouseEventKind::ScrollUp => {
-                let children = self.current_children();
-                if !children.is_empty() {
-                    self.selected_index = if self.selected_index == 0 {
-                        children.len() - 1
-                    } else {
-                        self.selected_index - 1
-                    };
+                if in_modal {
+                    self.scroll_modal_up();
+                    return;
+                }
+                if self.selected_index > 0 {
+                    self.selected_index -= 1;
                 }
             }
             MouseEventKind::Down(MouseButton::Left) => {
-                self.handle_mouse_click(mouse.column, mouse.row);
+                if !in_modal {
+                    self.handle_mouse_click(mouse.column, mouse.row);
+                }
+            }
+            MouseEventKind::Down(MouseButton::Right) => {
+                if in_modal {
+                    // Right-click in modal cancels/closes the modal
+                    self.modal = ModalState::None;
+                } else if let Some(current_node) = self.tree.get_node(self.current_dir_id) {
+                    // Right-click: navigate to parent directory
+                    if let Some(parent_id) = current_node.parent {
+                        self.current_dir_id = parent_id;
+                        self.selected_index = 0;
+                        self.filter_query.clear();
+                        *self.table_state.borrow_mut() = TableState::default();
+                    }
+                }
             }
             _ => {}
         }
+    }
+
+    fn scroll_modal_down(&mut self) {
+        match &mut self.modal {
+            ModalState::Jump {
+                selected_index,
+                results,
+                ..
+            } if !results.is_empty() => {
+                *selected_index = (*selected_index + 1).min(results.len() - 1);
+            }
+            ModalState::TopHogs {
+                selected_index,
+                hogs,
+            } if !hogs.is_empty() => {
+                *selected_index = (*selected_index + 1).min(hogs.len() - 1);
+            }
+            ModalState::Breakdown {
+                selected_index,
+                categories,
+                ..
+            } if !categories.is_empty() => {
+                *selected_index = (*selected_index + 1).min(categories.len() - 1);
+            }
+            ModalState::Diff {
+                diffs,
+                selected_diff_idx,
+                ..
+            } if !diffs.is_empty() => {
+                *selected_diff_idx = (*selected_diff_idx + 1).min(diffs.len() - 1);
+            }
+            _ => {}
+        }
+    }
+
+    fn scroll_modal_up(&mut self) {
+        match &mut self.modal {
+            ModalState::Jump { selected_index, .. } => {
+                *selected_index = selected_index.saturating_sub(1);
+            }
+            ModalState::TopHogs { selected_index, .. } => {
+                *selected_index = selected_index.saturating_sub(1);
+            }
+            ModalState::Breakdown { selected_index, .. } => {
+                *selected_index = selected_index.saturating_sub(1);
+            }
+            ModalState::Diff {
+                selected_diff_idx, ..
+            } => {
+                *selected_diff_idx = selected_diff_idx.saturating_sub(1);
+            }
+            _ => {}
+        }
+    }
+
+    /// Retrieve the table's scroll offset directly from the ratatui TableState
+    fn table_scroll_offset(&self) -> usize {
+        self.table_state.borrow().offset()
     }
 
     fn handle_mouse_click(&mut self, col: u16, row: u16) {
@@ -229,16 +318,26 @@ impl App {
             term_width
         };
 
-        // Click inside Explorer table area (row 1 is volume bar, row 2 is table start)
-        if col < table_width && row >= 1 && row < term_height.saturating_sub(2) {
-            let table_start_y = 1;
-            // Rows start 3 lines down from table border (top border + header + margin)
-            if row >= table_start_y + 3 {
-                let clicked_idx = (row - (table_start_y + 3)) as usize;
+        // Table chunk starts at y = 1 and ends before status bar (term_height - 2)
+        // Inside table block:
+        //   y = 1: top border
+        //   y = 2: header row
+        //   y = 3: header bottom margin
+        //   y = 4: first data row (visual_row = 0)
+        let table_y_start = 1_u16;
+        let data_row_start_y = table_y_start + 3; // y = 4
+        let data_row_end_y = term_height.saturating_sub(3); // bottom border is at term_height - 3
+
+        if col < table_width && row >= table_y_start && row < term_height.saturating_sub(2) {
+            if row >= data_row_start_y && row < data_row_end_y {
+                let scroll_offset = self.table_scroll_offset();
+                let visual_row = (row - data_row_start_y) as usize;
+                let clicked_idx = visual_row + scroll_offset;
+
                 let children = self.current_children();
                 if clicked_idx < children.len() {
                     if clicked_idx == self.selected_index {
-                        // Double-click on already-selected row -> Drill down!
+                        // Second click on same item → enter directory
                         if let Some(&child_id) = children.get(clicked_idx) {
                             if let Some(node) = self.tree.get_node(child_id) {
                                 if node.is_dir() {
@@ -246,6 +345,7 @@ impl App {
                                     self.current_dir_id = child_id;
                                     self.selected_index = 0;
                                     self.filter_query.clear();
+                                    *self.table_state.borrow_mut() = TableState::default();
                                     self.frecency_store.record_visit(&path);
                                     self.volume_info = get_volume_info(&path);
                                 }
@@ -255,13 +355,14 @@ impl App {
                         self.selected_index = clicked_idx;
                     }
                 }
-            } else if row == table_start_y {
-                // Clicked on table title/header border: Ascend to parent directory!
+            } else if row <= table_y_start + 1 {
+                // Clicked on table title/header border → go to parent
                 if let Some(current_node) = self.tree.get_node(self.current_dir_id) {
                     if let Some(parent_id) = current_node.parent {
                         self.current_dir_id = parent_id;
                         self.selected_index = 0;
                         self.filter_query.clear();
+                        *self.table_state.borrow_mut() = TableState::default();
                     }
                 }
             }
@@ -288,7 +389,9 @@ impl App {
 
         match key.code {
             KeyCode::Char('q') => self.should_quit = true,
-            KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => self.should_quit = true,
+            KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                self.should_quit = true
+            }
 
             // Toggle live file preview pane
             KeyCode::Tab => {
@@ -404,7 +507,9 @@ impl App {
             }
 
             // Quick-jump modal
-            KeyCode::Char('f') | KeyCode::Char('p') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+            KeyCode::Char('f') | KeyCode::Char('p')
+                if key.modifiers.contains(KeyModifiers::CONTROL) =>
+            {
                 let initial_query = "".to_string();
                 let results = self.frecency_store.query(&initial_query);
                 self.modal = ModalState::Jump {
@@ -435,7 +540,11 @@ impl App {
                 if snapshots.is_empty() {
                     self.status_message = "No snapshots found. Press [p] to create one!".into();
                 } else {
-                    let curr_path = self.tree.get_node(self.current_dir_id).map(|n| n.path.clone()).unwrap_or_default();
+                    let curr_path = self
+                        .tree
+                        .get_node(self.current_dir_id)
+                        .map(|n| n.path.clone())
+                        .unwrap_or_default();
                     let live_snap = SnapshotManager::create_snapshot(&self.tree, &curr_path).ok();
                     let diffs = if let Some(live) = live_snap {
                         SnapshotManager::diff(&snapshots[0], &live)
@@ -508,7 +617,12 @@ impl App {
     }
 
     fn handle_jump_key(&mut self, key: KeyEvent) {
-        if let ModalState::Jump { query, results, selected_index } = &mut self.modal {
+        if let ModalState::Jump {
+            query,
+            results,
+            selected_index,
+        } = &mut self.modal
+        {
             match key.code {
                 KeyCode::Esc => self.modal = ModalState::None,
                 KeyCode::Char(c) => {
@@ -548,7 +662,13 @@ impl App {
     }
 
     fn handle_diff_key(&mut self, key: KeyEvent) {
-        if let ModalState::Diff { snapshots, active_snap_idx, diffs, selected_diff_idx } = &mut self.modal {
+        if let ModalState::Diff {
+            snapshots,
+            active_snap_idx,
+            diffs,
+            selected_diff_idx,
+        } = &mut self.modal
+        {
             match key.code {
                 KeyCode::Esc | KeyCode::Char('q') => self.modal = ModalState::None,
                 KeyCode::Down | KeyCode::Char('j') => {
@@ -568,7 +688,11 @@ impl App {
                 KeyCode::Tab => {
                     if !snapshots.is_empty() {
                         *active_snap_idx = (*active_snap_idx + 1) % snapshots.len();
-                        let curr_path = self.tree.get_node(self.current_dir_id).map(|n| n.path.clone()).unwrap_or_default();
+                        let curr_path = self
+                            .tree
+                            .get_node(self.current_dir_id)
+                            .map(|n| n.path.clone())
+                            .unwrap_or_default();
                         if let Ok(live) = SnapshotManager::create_snapshot(&self.tree, &curr_path) {
                             *diffs = SnapshotManager::diff(&snapshots[*active_snap_idx], &live);
                             *selected_diff_idx = 0;
@@ -578,10 +702,19 @@ impl App {
                 // Export report to Markdown
                 KeyCode::Char('s') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                     if let Some(snap) = snapshots.get(*active_snap_idx) {
-                        let curr_path = self.tree.get_node(self.current_dir_id).map(|n| n.path.clone()).unwrap_or_default();
+                        let curr_path = self
+                            .tree
+                            .get_node(self.current_dir_id)
+                            .map(|n| n.path.clone())
+                            .unwrap_or_default();
                         if let Ok(live) = SnapshotManager::create_snapshot(&self.tree, &curr_path) {
                             let report_path = PathBuf::from("strata_diff_report.md");
-                            if let Ok(p) = SnapshotManager::export_markdown_report(snap, &live, diffs, &report_path) {
+                            if let Ok(p) = SnapshotManager::export_markdown_report(
+                                snap,
+                                &live,
+                                diffs,
+                                &report_path,
+                            ) {
                                 self.status_message = format!("Exported report to {}", p.display());
                                 self.modal = ModalState::None;
                             }
@@ -597,7 +730,15 @@ impl App {
         let mut close_modal = false;
         let mut do_action = false;
 
-        if let ModalState::Crypto { action, password, confirm, is_confirm_field, status_msg, .. } = &mut self.modal {
+        if let ModalState::Crypto {
+            action,
+            password,
+            confirm,
+            is_confirm_field,
+            status_msg,
+            ..
+        } = &mut self.modal
+        {
             match key.code {
                 KeyCode::Esc => close_modal = true,
                 KeyCode::Tab => {
@@ -635,7 +776,14 @@ impl App {
         if close_modal {
             self.modal = ModalState::None;
         } else if do_action {
-            if let ModalState::Crypto { action, target_path, password, status_msg, .. } = &mut self.modal {
+            if let ModalState::Crypto {
+                action,
+                target_path,
+                password,
+                status_msg,
+                ..
+            } = &mut self.modal
+            {
                 let res = match action {
                     CryptoAction::Encrypt => CryptoEngine::encrypt_path(target_path, password),
                     CryptoAction::Decrypt => CryptoEngine::decrypt_path(target_path, password),
@@ -668,7 +816,11 @@ impl App {
     }
 
     fn handle_top_hogs_key(&mut self, key: KeyEvent) {
-        if let ModalState::TopHogs { hogs, selected_index } = &mut self.modal {
+        if let ModalState::TopHogs {
+            hogs,
+            selected_index,
+        } = &mut self.modal
+        {
             match key.code {
                 KeyCode::Esc | KeyCode::Char('q') | KeyCode::Char('t') => {
                     self.modal = ModalState::None;
@@ -702,7 +854,12 @@ impl App {
     }
 
     fn handle_delete_key(&mut self, key: KeyEvent) {
-        if let ModalState::Delete { target_path, is_dir, .. } = &self.modal {
+        if let ModalState::Delete {
+            target_path,
+            is_dir,
+            ..
+        } = &self.modal
+        {
             match key.code {
                 KeyCode::Char('y') => {
                     let res = if *is_dir {
@@ -735,24 +892,25 @@ impl App {
     }
 
     fn handle_breakdown_key(&mut self, key: KeyEvent) {
-        if let ModalState::Breakdown { categories, selected_index, .. } = &mut self.modal {
+        if let ModalState::Breakdown {
+            categories,
+            selected_index,
+            ..
+        } = &mut self.modal
+        {
             match key.code {
                 KeyCode::Esc | KeyCode::Char('q') | KeyCode::Char('b') => {
                     self.modal = ModalState::None;
                 }
-                KeyCode::Down | KeyCode::Char('j') => {
-                    if !categories.is_empty() {
-                        *selected_index = (*selected_index + 1) % categories.len();
-                    }
+                KeyCode::Down | KeyCode::Char('j') if !categories.is_empty() => {
+                    *selected_index = (*selected_index + 1) % categories.len();
                 }
-                KeyCode::Up | KeyCode::Char('k') => {
-                    if !categories.is_empty() {
-                        *selected_index = if *selected_index == 0 {
-                            categories.len() - 1
-                        } else {
-                            *selected_index - 1
-                        };
-                    }
+                KeyCode::Up | KeyCode::Char('k') if !categories.is_empty() => {
+                    *selected_index = if *selected_index == 0 {
+                        categories.len() - 1
+                    } else {
+                        *selected_index - 1
+                    };
                 }
                 _ => {}
             }
@@ -796,7 +954,9 @@ impl App {
 
         let children = self.current_children();
         let current_node = self.tree.get_node(self.current_dir_id);
-        let current_path = current_node.map(|n| n.path.to_string_lossy().to_string()).unwrap_or_else(|| "/".into());
+        let current_path = current_node
+            .map(|n| n.path.to_string_lossy().to_string())
+            .unwrap_or_else(|| "/".into());
         let total_size = current_node.map(|n| n.disk_size).unwrap_or(0);
         let item_count = self.tree.nodes.len();
 
@@ -819,6 +979,7 @@ impl App {
                 self.sort_order,
                 &self.filter_query,
                 &self.theme,
+                &mut self.table_state.borrow_mut(),
             );
 
             render_preview_pane(
@@ -839,6 +1000,7 @@ impl App {
                 self.sort_order,
                 &self.filter_query,
                 &self.theme,
+                &mut self.table_state.borrow_mut(),
             );
         }
 
@@ -874,14 +1036,42 @@ impl App {
         // Render modals on top
         match &self.modal {
             ModalState::None | ModalState::Filter => {}
-            ModalState::Jump { query, results, selected_index } => {
+            ModalState::Jump {
+                query,
+                results,
+                selected_index,
+            } => {
                 render_jump_modal(f, size, query, results, *selected_index, &self.theme);
             }
-            ModalState::Diff { snapshots, active_snap_idx, diffs, selected_diff_idx } => {
-                render_diff_modal(f, size, snapshots, *active_snap_idx, diffs, *selected_diff_idx, &self.theme);
+            ModalState::Diff {
+                snapshots,
+                active_snap_idx,
+                diffs,
+                selected_diff_idx,
+            } => {
+                render_diff_modal(
+                    f,
+                    size,
+                    snapshots,
+                    *active_snap_idx,
+                    diffs,
+                    *selected_diff_idx,
+                    &self.theme,
+                );
             }
-            ModalState::Crypto { action, target_path, password, confirm, is_confirm_field, status_msg } => {
-                let confirm_len = if *action == CryptoAction::Encrypt { Some(confirm.len()) } else { None };
+            ModalState::Crypto {
+                action,
+                target_path,
+                password,
+                confirm,
+                is_confirm_field,
+                status_msg,
+            } => {
+                let confirm_len = if *action == CryptoAction::Encrypt {
+                    Some(confirm.len())
+                } else {
+                    None
+                };
                 render_crypto_modal(
                     f,
                     size,
@@ -897,14 +1087,32 @@ impl App {
             ModalState::Inode { target_path } => {
                 render_inode_modal(f, size, target_path, &self.theme);
             }
-            ModalState::TopHogs { hogs, selected_index } => {
+            ModalState::TopHogs {
+                hogs,
+                selected_index,
+            } => {
                 render_top_hogs_modal(f, size, hogs, *selected_index, &self.theme);
             }
-            ModalState::Delete { target_path, is_dir, reclaimed_bytes } => {
+            ModalState::Delete {
+                target_path,
+                is_dir,
+                reclaimed_bytes,
+            } => {
                 render_delete_modal(f, size, target_path, *is_dir, *reclaimed_bytes, &self.theme);
             }
-            ModalState::Breakdown { categories, total_bytes, selected_index } => {
-                render_breakdown_modal(f, size, categories, *total_bytes, *selected_index, &self.theme);
+            ModalState::Breakdown {
+                categories,
+                total_bytes,
+                selected_index,
+            } => {
+                render_breakdown_modal(
+                    f,
+                    size,
+                    categories,
+                    *total_bytes,
+                    *selected_index,
+                    &self.theme,
+                );
             }
         }
     }

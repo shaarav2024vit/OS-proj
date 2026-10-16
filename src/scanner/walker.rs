@@ -23,8 +23,15 @@ pub struct ScannedEntry {
 #[derive(Debug, Clone)]
 pub enum ScannerMessage {
     Batch(Vec<ScannedEntry>),
-    Progress { files: usize, bytes: u64, current_path: PathBuf },
-    Complete { total_files: usize, total_bytes: u64 },
+    Progress {
+        files: usize,
+        bytes: u64,
+        current_path: PathBuf,
+    },
+    Complete {
+        total_files: usize,
+        total_bytes: u64,
+    },
     Error(String),
 }
 
@@ -80,7 +87,11 @@ impl Scanner {
 
                 // In Unix, metadata.blocks() * 512 is true physical allocated disk size
                 let physical_size = metadata.blocks() * 512;
-                let size = if physical_size > 0 { physical_size } else { metadata.len() };
+                let size = if physical_size > 0 {
+                    physical_size
+                } else {
+                    metadata.len()
+                };
 
                 let modified = metadata
                     .modified()

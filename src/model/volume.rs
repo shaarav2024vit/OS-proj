@@ -44,7 +44,11 @@ pub fn get_volume_info(path: &Path) -> Option<VolumeInfo> {
         return None;
     }
 
-    let fragment_size = if stat.f_frsize > 0 { stat.f_frsize as u64 } else { stat.f_bsize as u64 };
+    let fragment_size = if stat.f_frsize > 0 {
+        stat.f_frsize as u64
+    } else {
+        stat.f_bsize as u64
+    };
     let total_bytes = (stat.f_blocks as u64) * fragment_size;
     let free_bytes = (stat.f_bfree as u64) * fragment_size;
     let available_bytes = (stat.f_bavail as u64) * fragment_size;

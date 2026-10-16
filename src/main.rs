@@ -45,7 +45,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let default_hook = std::panic::take_hook();
     std::panic::set_hook(Box::new(move |panic_info| {
         let _ = disable_raw_mode();
-        let _ = execute!(stdout(), LeaveAlternateScreen, crossterm::event::DisableMouseCapture);
+        let _ = execute!(
+            stdout(),
+            LeaveAlternateScreen,
+            crossterm::event::DisableMouseCapture
+        );
         default_hook(panic_info);
     }));
 
@@ -55,14 +59,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .map(PathBuf::from)
         .unwrap_or_else(|| env::current_dir().unwrap_or_else(|_| PathBuf::from(".")));
 
-    let target_path = target_path
-        .canonicalize()
-        .unwrap_or(target_path);
+    let target_path = target_path.canonicalize().unwrap_or(target_path);
 
     // Initialize terminal in raw mode, alternate screen, and mouse capture
     enable_raw_mode()?;
     let mut stdout = stdout();
-    execute!(stdout, EnterAlternateScreen, crossterm::event::EnableMouseCapture)?;
+    execute!(
+        stdout,
+        EnterAlternateScreen,
+        crossterm::event::EnableMouseCapture
+    )?;
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
     terminal.clear()?;
@@ -94,7 +100,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Clean teardown
     disable_raw_mode()?;
-    execute!(terminal.backend_mut(), LeaveAlternateScreen, crossterm::event::DisableMouseCapture)?;
+    execute!(
+        terminal.backend_mut(),
+        LeaveAlternateScreen,
+        crossterm::event::DisableMouseCapture
+    )?;
     terminal.show_cursor()?;
 
     Ok(())
@@ -107,7 +117,9 @@ fn print_help() {
     println!();
     println!("USAGE:");
     println!("    strata [PATH]                  Launch interactive TUI in target directory");
-    println!("    strata --bench [PATH]          Run headless benchmark scan with throughput metrics");
+    println!(
+        "    strata --bench [PATH]          Run headless benchmark scan with throughput metrics"
+    );
     println!("    strata --help                  Display this help message");
     println!();
     println!("KEYBINDINGS (in TUI):");
@@ -124,7 +136,9 @@ fn print_help() {
     println!("    d                              Snapshot differential inspector");
     println!("    e / u                          Encrypt file/folder / Decrypt .strata");
     println!("    x                              Delete file/folder with space check");
-    println!("    T                              Cycle theme (Catppuccin, Tokyo Night, Gruvbox, Nord)");
+    println!(
+        "    T                              Cycle theme (Catppuccin, Tokyo Night, Gruvbox, Nord)"
+    );
     println!("    q                              Quit");
 }
 
@@ -151,7 +165,10 @@ fn run_benchmark_scan(target: PathBuf) -> Result<(), Box<dyn std::error::Error>>
                     tree.insert_entry(entry.path, entry.node_type, entry.size, entry.modified);
                 }
             }
-            ScannerMessage::Complete { total_files: f, total_bytes: b } => {
+            ScannerMessage::Complete {
+                total_files: f,
+                total_bytes: b,
+            } => {
                 total_files = f;
                 total_bytes = b;
                 break;
@@ -175,11 +192,29 @@ fn run_benchmark_scan(target: PathBuf) -> Result<(), Box<dyn std::error::Error>>
 
     println!("------------------------------------------------------------");
     println!("📁 Inodes Traversed:       {} items", total_files);
-    println!("💾 Total Disk Allocated:   {:.2} MB ({:.3} GB)", mbs, mbs / 1024.0);
-    println!("⏱️  Scan & Ingest Time:     {:.3} s ({:?})", scan_secs, scan_time);
-    println!("🌳 Arena Size Aggregation: {:.3} s ({:?})", agg_time.as_secs_f64(), agg_time);
-    println!("🏁 Total Wall-Clock Time:  {:.3} s ({:?})", total_time.as_secs_f64(), total_time);
-    println!("🚀 Traversal Throughput:   {:.0} inodes/sec ({:.2} MB/sec)", files_per_sec, mb_per_sec);
+    println!(
+        "💾 Total Disk Allocated:   {:.2} MB ({:.3} GB)",
+        mbs,
+        mbs / 1024.0
+    );
+    println!(
+        "⏱️  Scan & Ingest Time:     {:.3} s ({:?})",
+        scan_secs, scan_time
+    );
+    println!(
+        "🌳 Arena Size Aggregation: {:.3} s ({:?})",
+        agg_time.as_secs_f64(),
+        agg_time
+    );
+    println!(
+        "🏁 Total Wall-Clock Time:  {:.3} s ({:?})",
+        total_time.as_secs_f64(),
+        total_time
+    );
+    println!(
+        "🚀 Traversal Throughput:   {:.0} inodes/sec ({:.2} MB/sec)",
+        files_per_sec, mb_per_sec
+    );
     println!("============================================================");
 
     Ok(())

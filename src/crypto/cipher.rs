@@ -91,17 +91,21 @@ impl CryptoEngine {
         let temp_path = output_path.with_extension("strata.tmp");
 
         // Write atomic file envelope: MAGIC + VERSION + IS_DIR + SALT + NONCE + CIPHERTEXT
-        let mut out = File::create(&temp_path).map_err(|e| format!("Failed to create file: {}", e))?;
+        let mut out =
+            File::create(&temp_path).map_err(|e| format!("Failed to create file: {}", e))?;
         out.write_all(MAGIC_BYTES).map_err(|e| e.to_string())?;
-        out.write_all(&[FORMAT_VERSION]).map_err(|e| e.to_string())?;
-        out.write_all(&[if is_dir { 1 } else { 0 }]).map_err(|e| e.to_string())?;
+        out.write_all(&[FORMAT_VERSION])
+            .map_err(|e| e.to_string())?;
+        out.write_all(&[if is_dir { 1 } else { 0 }])
+            .map_err(|e| e.to_string())?;
         out.write_all(&salt).map_err(|e| e.to_string())?;
         out.write_all(&nonce_bytes).map_err(|e| e.to_string())?;
         out.write_all(&ciphertext).map_err(|e| e.to_string())?;
         out.sync_all().map_err(|e| e.to_string())?;
 
         // Atomically rename temporary file
-        fs::rename(&temp_path, &output_path).map_err(|e| format!("Failed to commit file: {}", e))?;
+        fs::rename(&temp_path, &output_path)
+            .map_err(|e| format!("Failed to commit file: {}", e))?;
 
         // Safely remove unencrypted original
         if is_dir {
@@ -115,7 +119,8 @@ impl CryptoEngine {
 
     /// Decrypt a `.strata` file back into its original file or directory
     pub fn decrypt_path(path: &Path, passphrase: &str) -> Result<PathBuf, String> {
-        let mut file = File::open(path).map_err(|e| format!("Failed to open encrypted file: {}", e))?;
+        let mut file =
+            File::open(path).map_err(|e| format!("Failed to open encrypted file: {}", e))?;
         let mut buffer = Vec::new();
         file.read_to_end(&mut buffer).map_err(|e| e.to_string())?;
 

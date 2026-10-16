@@ -5,19 +5,14 @@ use std::path::PathBuf;
 use strata::crypto::CryptoEngine;
 use strata::frecency::FrecencyStore;
 use strata::model::{DirectoryTree, NodeType};
-use strata::snapshot::{DiffKind, SnapshotItem, Snapshot, SnapshotManager};
+use strata::snapshot::{DiffKind, Snapshot, SnapshotItem, SnapshotManager};
 
 #[test]
 fn test_tree_aggregation() {
     let mut tree = DirectoryTree::new(PathBuf::from("/test"));
     let root_id = tree.root_id;
 
-    let sub_id = tree.insert_entry(
-        PathBuf::from("/test/sub"),
-        NodeType::Directory,
-        0,
-        1000,
-    );
+    let sub_id = tree.insert_entry(PathBuf::from("/test/sub"), NodeType::Directory, 0, 1000);
 
     tree.insert_entry(
         PathBuf::from("/test/sub/file1.txt"),
@@ -104,14 +99,23 @@ fn test_snapshot_diff() {
 
     let diffs = SnapshotManager::diff(&old_snap, &new_snap);
 
-    let grown = diffs.iter().find(|d| d.relative_path == PathBuf::from("keep.txt")).unwrap();
+    let grown = diffs
+        .iter()
+        .find(|d| d.relative_path == std::path::Path::new("keep.txt"))
+        .unwrap();
     assert_eq!(grown.kind, DiffKind::Grown);
     assert_eq!(grown.size_delta, 2000);
 
-    let added = diffs.iter().find(|d| d.relative_path == PathBuf::from("new.txt")).unwrap();
+    let added = diffs
+        .iter()
+        .find(|d| d.relative_path == std::path::Path::new("new.txt"))
+        .unwrap();
     assert_eq!(added.kind, DiffKind::Added);
 
-    let removed = diffs.iter().find(|d| d.relative_path == PathBuf::from("deleted.txt")).unwrap();
+    let removed = diffs
+        .iter()
+        .find(|d| d.relative_path == std::path::Path::new("deleted.txt"))
+        .unwrap();
     assert_eq!(removed.kind, DiffKind::Removed);
 }
 
@@ -123,7 +127,8 @@ fn test_aes_gcm_crypto_roundtrip() {
     let secret_file = temp_dir.join("secret.txt");
     {
         let mut f = File::create(&secret_file).unwrap();
-        f.write_all(b"Strata AES-256-GCM authenticated payload").unwrap();
+        f.write_all(b"Strata AES-256-GCM authenticated payload")
+            .unwrap();
     }
 
     let password = "SuperSecretPassword123!";

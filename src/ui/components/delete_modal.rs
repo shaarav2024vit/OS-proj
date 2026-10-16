@@ -41,31 +41,59 @@ pub fn render_delete_modal(
         .and_then(|n| n.to_str())
         .unwrap_or("");
 
-    let item_type = if is_dir { "directory and all contents" } else { "file" };
+    let item_type = if is_dir {
+        "directory and all contents"
+    } else {
+        "file"
+    };
 
     let text = vec![
         Line::from(vec![
-            Span::styled("Are you sure you want to delete this ", Style::default().fg(theme.text)),
-            Span::styled(item_type, Style::default().fg(theme.yellow).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "Are you sure you want to delete this ",
+                Style::default().fg(theme.text),
+            ),
+            Span::styled(
+                item_type,
+                Style::default()
+                    .fg(theme.yellow)
+                    .add_modifier(Modifier::BOLD),
+            ),
             Span::styled("?", Style::default().fg(theme.text)),
         ]),
         Line::from(""),
         Line::from(vec![
             Span::styled("Target: ", Style::default().fg(theme.subtext)),
-            Span::styled(filename, Style::default().fg(theme.red).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                filename,
+                Style::default().fg(theme.red).add_modifier(Modifier::BOLD),
+            ),
         ]),
         Line::from(vec![
             Span::styled("Space to be freed: ", Style::default().fg(theme.subtext)),
-            Span::styled(format_bytes(reclaimed_bytes), Style::default().fg(theme.green).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                format_bytes(reclaimed_bytes),
+                Style::default()
+                    .fg(theme.green)
+                    .add_modifier(Modifier::BOLD),
+            ),
         ]),
     ];
 
     f.render_widget(Paragraph::new(text), inner[0]);
 
     let footer = Line::from(vec![
-        Span::styled(" [y] ", Style::default().fg(theme.red).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            " [y] ",
+            Style::default().fg(theme.red).add_modifier(Modifier::BOLD),
+        ),
         Span::styled("Confirm Delete    ", Style::default().fg(theme.subtext)),
-        Span::styled(" [n / Esc] ", Style::default().fg(theme.green).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            " [n / Esc] ",
+            Style::default()
+                .fg(theme.green)
+                .add_modifier(Modifier::BOLD),
+        ),
         Span::styled("Cancel", Style::default().fg(theme.subtext)),
     ]);
 

@@ -7,12 +7,7 @@ use ratatui::Frame;
 use crate::model::VolumeInfo;
 use crate::ui::theme::Theme;
 
-pub fn render_volume_bar(
-    f: &mut Frame,
-    area: Rect,
-    vol: Option<&VolumeInfo>,
-    theme: &Theme,
-) {
+pub fn render_volume_bar(f: &mut Frame, area: Rect, vol: Option<&VolumeInfo>, theme: &Theme) {
     let vol = match vol {
         Some(v) => v,
         None => {
@@ -28,7 +23,10 @@ pub fn render_volume_bar(
     let bar_width = 14;
     let (bar_str, bar_style) = theme.format_usage_bar(ratio, bar_width);
 
-    let dev_tag = format!(" 󰋊 {} [{} on {}] ", vol.device, vol.fs_type, vol.mount_point);
+    let dev_tag = format!(
+        " 󰋊 {} [{} on {}] ",
+        vol.device, vol.fs_type, vol.mount_point
+    );
     let dev_span = Span::styled(
         dev_tag,
         Style::default()
@@ -43,7 +41,10 @@ pub fn render_volume_bar(
     let pct_str = format!("{:.1}%", ratio * 100.0);
 
     let stats_span = Span::styled(
-        format!(" {} / {} ({} used, {} free) ", used_str, total_str, pct_str, free_str),
+        format!(
+            " {} / {} ({} used, {} free) ",
+            used_str, total_str, pct_str, free_str
+        ),
         Style::default().fg(theme.text),
     );
 
@@ -63,7 +64,8 @@ pub fn render_volume_bar(
         inode_span,
     ]);
 
-    let p = Paragraph::new(line).block(Block::default().style(Style::default().bg(theme.bg_mantle)));
+    let p =
+        Paragraph::new(line).block(Block::default().style(Style::default().bg(theme.bg_mantle)));
     f.render_widget(p, area);
 }
 

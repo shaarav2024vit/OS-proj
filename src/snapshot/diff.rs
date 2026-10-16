@@ -58,7 +58,10 @@ impl SnapshotManager {
     }
 
     /// Capture a snapshot from an in-memory DirectoryTree
-    pub fn create_snapshot(tree: &DirectoryTree, root_path: &Path) -> Result<Snapshot, Box<dyn std::error::Error>> {
+    pub fn create_snapshot(
+        tree: &DirectoryTree,
+        root_path: &Path,
+    ) -> Result<Snapshot, Box<dyn std::error::Error>> {
         let now = SystemTime::now()
             .duration_since(SystemTime::UNIX_EPOCH)
             .map(|d| d.as_secs())
@@ -117,7 +120,7 @@ impl SnapshotManager {
             }
         }
 
-        list.sort_by(|a, b| b.created_at.cmp(&a.created_at));
+        list.sort_by_key(|a| std::cmp::Reverse(a.created_at));
         list
     }
 
@@ -204,13 +207,20 @@ impl SnapshotManager {
         let mut f = fs::File::create(target_file)?;
 
         writeln!(f, "# Strata: File System Differential Analysis Report")?;
-        writeln!(f, "* **Target Directory**: `{}`", new_snap.root_path.display())?;
+        writeln!(
+            f,
+            "* **Target Directory**: `{}`",
+            new_snap.root_path.display()
+        )?;
         writeln!(f, "* **Baseline Snapshot**: `{}`", old_snap.id)?;
         writeln!(f, "* **Compared Snapshot**: `{}`", new_snap.id)?;
         writeln!(f, "* **Total Files Analyzed**: {}", new_snap.total_items)?;
         writeln!(f, "\n---\n")?;
         writeln!(f, "## Detected Storage Changes\n")?;
-        writeln!(f, "| Status | Type | Path | Delta | Previous Size | New Size |")?;
+        writeln!(
+            f,
+            "| Status | Type | Path | Delta | Previous Size | New Size |"
+        )?;
         writeln!(f, "| :---: | :---: | :--- | :---: | :---: | :---: |")?;
 
         for d in diffs {

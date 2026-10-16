@@ -43,11 +43,22 @@ pub fn render_top_hogs_modal(
     let inner = Layout::default()
         .direction(Direction::Vertical)
         .margin(1)
-        .constraints([Constraint::Length(2), Constraint::Min(8), Constraint::Length(1)])
+        .constraints([
+            Constraint::Length(2),
+            Constraint::Min(8),
+            Constraint::Length(1),
+        ])
         .split(popup_area);
 
-    let header_text = format!(" Identified {} massive files across scanned storage: ", hogs.len());
-    let header_p = Paragraph::new(header_text).style(Style::default().fg(theme.mauve).add_modifier(Modifier::BOLD));
+    let header_text = format!(
+        " Identified {} massive files across scanned storage: ",
+        hogs.len()
+    );
+    let header_p = Paragraph::new(header_text).style(
+        Style::default()
+            .fg(theme.mauve)
+            .add_modifier(Modifier::BOLD),
+    );
     f.render_widget(header_p, inner[0]);
 
     let list_items: Vec<ListItem> = hogs
@@ -66,17 +77,30 @@ pub fn render_top_hogs_modal(
             let prefix = if is_sel { " ❯ " } else { "   " };
 
             let spans = vec![
-                Span::styled(prefix, if is_sel { Style::default().fg(theme.mauve) } else { theme.dim_style() }),
+                Span::styled(
+                    prefix,
+                    if is_sel {
+                        Style::default().fg(theme.mauve)
+                    } else {
+                        theme.dim_style()
+                    },
+                ),
                 Span::styled(rank, Style::default().fg(theme.overlay)),
                 Span::styled(format!("{} ", icon.glyph), Style::default().fg(icon.color)),
                 Span::styled(
                     format!("{:<38} ", truncate(&path_str, 36)),
-                    if is_sel { Style::default().fg(theme.text).add_modifier(Modifier::BOLD) } else { Style::default().fg(theme.subtext) },
+                    if is_sel {
+                        Style::default().fg(theme.text).add_modifier(Modifier::BOLD)
+                    } else {
+                        Style::default().fg(theme.subtext)
+                    },
                 ),
                 Span::styled(bar_str, bar_style),
                 Span::styled(
                     format!(" {:>10}", format_bytes(entry.size)),
-                    Style::default().fg(theme.size_color(entry.size)).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(theme.size_color(entry.size))
+                        .add_modifier(Modifier::BOLD),
                 ),
             ];
 
@@ -97,9 +121,17 @@ pub fn render_top_hogs_modal(
     f.render_widget(list, inner[1]);
 
     let footer = Line::from(vec![
-        Span::styled(" [Enter] ", Style::default().fg(theme.green).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            " [Enter] ",
+            Style::default()
+                .fg(theme.green)
+                .add_modifier(Modifier::BOLD),
+        ),
         Span::styled("Jump to Folder   ", Style::default().fg(theme.subtext)),
-        Span::styled(" [Esc/q] ", Style::default().fg(theme.red).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            " [Esc/q] ",
+            Style::default().fg(theme.red).add_modifier(Modifier::BOLD),
+        ),
         Span::styled("Close", Style::default().fg(theme.subtext)),
     ]);
     f.render_widget(Paragraph::new(footer), inner[2]);
@@ -117,7 +149,7 @@ pub fn collect_space_hogs(tree: &DirectoryTree, limit: usize) -> Vec<SpaceHogEnt
         })
         .collect();
 
-    files.sort_by(|a, b| b.size.cmp(&a.size));
+    files.sort_by_key(|a| std::cmp::Reverse(a.size));
     files.truncate(limit);
     files
 }

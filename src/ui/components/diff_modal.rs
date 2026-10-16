@@ -53,7 +53,11 @@ pub fn render_diff_modal(
         .border_type(Theme::BORDER_TYPE)
         .border_style(Style::default().fg(theme.sapphire));
     let snap_p = Paragraph::new(snap_desc)
-        .style(Style::default().fg(theme.mauve).add_modifier(Modifier::BOLD))
+        .style(
+            Style::default()
+                .fg(theme.mauve)
+                .add_modifier(Modifier::BOLD),
+        )
         .block(snap_block);
     f.render_widget(snap_p, inner[0]);
 
@@ -64,10 +68,34 @@ pub fn render_diff_modal(
         .map(|(idx, entry)| {
             let is_sel = idx == selected_diff_idx;
             let (badge, badge_style) = match entry.kind {
-                DiffKind::Added => (" [+] ADD  ", Style::default().bg(theme.green).fg(theme.bg_crust).add_modifier(Modifier::BOLD)),
-                DiffKind::Removed => (" [-] DEL  ", Style::default().bg(theme.red).fg(theme.bg_crust).add_modifier(Modifier::BOLD)),
-                DiffKind::Grown => (" [▲] GROW ", Style::default().bg(theme.peach).fg(theme.bg_crust).add_modifier(Modifier::BOLD)),
-                DiffKind::Shrunk => (" [▼] SHRK ", Style::default().bg(theme.teal).fg(theme.bg_crust).add_modifier(Modifier::BOLD)),
+                DiffKind::Added => (
+                    " [+] ADD  ",
+                    Style::default()
+                        .bg(theme.green)
+                        .fg(theme.bg_crust)
+                        .add_modifier(Modifier::BOLD),
+                ),
+                DiffKind::Removed => (
+                    " [-] DEL  ",
+                    Style::default()
+                        .bg(theme.red)
+                        .fg(theme.bg_crust)
+                        .add_modifier(Modifier::BOLD),
+                ),
+                DiffKind::Grown => (
+                    " [▲] GROW ",
+                    Style::default()
+                        .bg(theme.peach)
+                        .fg(theme.bg_crust)
+                        .add_modifier(Modifier::BOLD),
+                ),
+                DiffKind::Shrunk => (
+                    " [▼] SHRK ",
+                    Style::default()
+                        .bg(theme.teal)
+                        .fg(theme.bg_crust)
+                        .add_modifier(Modifier::BOLD),
+                ),
                 DiffKind::Unchanged => (" [=] SAME ", Style::default().fg(theme.overlay)),
             };
 
@@ -81,11 +109,22 @@ pub fn render_diff_modal(
 
             let prefix = if is_sel { " ❯ " } else { "   " };
             let spans = vec![
-                Span::styled(prefix, if is_sel { Style::default().fg(theme.mauve) } else { theme.dim_style() }),
+                Span::styled(
+                    prefix,
+                    if is_sel {
+                        Style::default().fg(theme.mauve)
+                    } else {
+                        theme.dim_style()
+                    },
+                ),
                 Span::styled(badge, badge_style),
                 Span::styled(
                     format!("  {:<35} ", entry.relative_path.to_string_lossy()),
-                    if is_sel { Style::default().fg(theme.text).add_modifier(Modifier::BOLD) } else { Style::default().fg(theme.subtext) },
+                    if is_sel {
+                        Style::default().fg(theme.text).add_modifier(Modifier::BOLD)
+                    } else {
+                        Style::default().fg(theme.subtext)
+                    },
                 ),
                 Span::styled(
                     format!(" {:>12} (was {})", delta_str, format_bytes(entry.old_size)),
@@ -101,7 +140,10 @@ pub fn render_diff_modal(
         })
         .collect();
 
-    let diff_title = format!(" Changes Detected ({}) │ [Tab] Switch Snapshot │ [Esc] Close ", diffs.len());
+    let diff_title = format!(
+        " Changes Detected ({}) │ [Tab] Switch Snapshot │ [Esc] Close ",
+        diffs.len()
+    );
     let diff_block = Block::default()
         .borders(Borders::ALL)
         .border_type(Theme::BORDER_TYPE)

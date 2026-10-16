@@ -1,3 +1,3 @@
 pub mod walker;
 
-pub use walker::{Scanner, ScannerMessage, ScannedEntry};
+pub use walker::{ScannedEntry, Scanner, ScannerMessage};
